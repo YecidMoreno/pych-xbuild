@@ -20,7 +20,7 @@ XBUILD_DIR="$(dirname "$(readlink -f "$0")")"
 
 # Set target from first positional argument, default to 'host'
 TARGET=${1:-host}
-
+shift
 # Set source directory to current directory by default
 SRC_DIR="$(pwd)"
 
@@ -86,7 +86,7 @@ set -- "${POSITIONAL_ARGS[@]}"
 DOCKER_IMAGE=""
 
 case "$TARGET" in
-host)
+host | x86_64-linux-gnu)
     TARGET="x86_64-linux-gnu"
     CMD="export TARGET=$TARGET && export BIN=./release/$TARGET/bin"
     CMD+=" && cmake -G Ninja -B ./build/$TARGET -S . "

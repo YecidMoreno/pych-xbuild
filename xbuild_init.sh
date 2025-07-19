@@ -18,7 +18,12 @@
 #
 
 # Get the absolute path of this script's directory
-XBUILD_DIR="$(dirname "$(readlink -f "$0")")"
+
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    XBUILD_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+else
+    XBUILD_DIR="$(dirname "$(readlink -f "$0")")"
+fi
 
 echo "Using $XBUILD_DIR"
 
