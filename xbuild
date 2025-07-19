@@ -46,7 +46,7 @@ read_args() {
                 shift $#
             else
                 echo "switch: ${1} with value: ${2}"
-                SRC_DIR="${2}"
+                SRC_DIR="$(realpath ${2})"
                 shift $((numOfArgs + 1))
             fi
             ;;
@@ -141,10 +141,14 @@ else
     CMD+=" && $POST_SCRIPT "
 fi
 
+DOCER_CMD="docker run --rm -it -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
+
 # Print final command
 echo '---------------------------------'
+echo "$DOCER_CMD"
 echo "$CMD"
 echo '---------------------------------'
 
 # Run the build inside Docker container with mounted volume
-docker run --rm -it -v "$SRC_DIR":/app -w /app "$DOCKER_IMAGE" bash -c "$CMD"
+FINAL_CMD="$DOCER_CMD \"$CMD\" "
+eval "$FINAL_CMD"
