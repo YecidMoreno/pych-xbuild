@@ -20,7 +20,7 @@ XBUILD_DIR="$(dirname "$(readlink -f "$0")")"
 
 # Set target from first positional argument, default to 'host'
 TARGET=${1:-host}
-shift
+# shift
 # Set source directory to current directory by default
 SRC_DIR="$(pwd)"
 
@@ -81,6 +81,7 @@ read_args() {
 # Parse arguments
 read_args "$@"
 set -- "${POSITIONAL_ARGS[@]}"
+shift
 
 # Define docker image and build command based on the target
 DOCKER_IMAGE=""
