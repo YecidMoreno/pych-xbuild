@@ -27,6 +27,10 @@ SRC_DIR="$(pwd)"
 # Initialize post-script as empty
 POST_SCRIPT=""
 
+CMAKELISTS_PWD="."
+
+INTERACTIVE=0
+
 # Array to store non-option positional arguments
 POSITIONAL_ARGS=()
 
@@ -69,6 +73,21 @@ read_args() {
             rm -rf "$SRC_DIR/debug"
             exit 0
             ;;
+        --cmake-pwd)
+            # Set custom CMakeLists.txt directory
+            numOfArgs=1
+            if (($# < numOfArgs + 1)); then
+                shift $#
+            else
+                echo "switch: ${1} with value: ${2}"
+                CMAKELISTS_PWD="${2}"
+                shift $((numOfArgs + 1))
+            fi
+            ;;
+        -it | --interactive)
+            INTERACTIVE=1
+            shift
+            ;;
         *)
             # Unrecognized positional argument
             POSITIONAL_ARGS+=("${1}")
@@ -90,7 +109,7 @@ case "$TARGET" in
 host | x86_64-linux-gnu)
     TARGET="x86_64-linux-gnu"
     CMD="export TARGET=$TARGET && export BIN=./release/$TARGET/bin"
-    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S . "
+    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S $CMAKELISTS_PWD "
     CMD+="-DCMAKE_INSTALL_PREFIX=./release/$TARGET "
     if ((DEBUG)); then
         CMD+=" -DCMAKE_BUILD_TYPE=Debug "
@@ -102,7 +121,7 @@ host | x86_64-linux-gnu)
 aarch64 | aarch64-unknown-linux-gnu | pi)
     TARGET="aarch64-unknown-linux-gnu"
     CMD="export TARGET=$TARGET && export BIN=./release/$TARGET/bin "
-    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/toolchain-$TARGET.cmake "
+    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S $CMAKELISTS_PWD -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/toolchain-$TARGET.cmake "
     CMD+=" -DCMAKE_INSTALL_PREFIX=./release/$TARGET "
     if ((DEBUG)); then
         CMD+=" -DCMAKE_BUILD_TYPE=Debug "
@@ -114,7 +133,7 @@ aarch64 | aarch64-unknown-linux-gnu | pi)
 musl | x86_64-alpine-linux-musl)
     TARGET="x86_64-alpine-linux-musl"
     CMD="export TARGET=$TARGET && export BIN=./release/$TARGET/bin "
-    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/toolchain-$TARGET.cmake "
+    CMD+=" && cmake -G Ninja -B ./build/$TARGET -S $CMAKELISTS_PWD -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/toolchain-$TARGET.cmake "
     CMD+="-DCMAKE_INSTALL_PREFIX=./release/$TARGET "
     if ((DEBUG)); then
         CMD+=" -DCMAKE_BUILD_TYPE=Debug "
@@ -122,6 +141,13 @@ musl | x86_64-alpine-linux-musl)
     CMD+=" && cmake --build build/$TARGET "
     CMD+=" && cmake --install build/$TARGET"
     DOCKER_IMAGE="pych-xbuild-musl:v0.1"
+    ;;
+none)
+    TARGET="none"
+    CMD="echo '----------------------' "
+    CMD+=" && echo '  Nothing to do' "
+    CMD+=" && echo '----------------------' "
+    DOCKER_IMAGE="pych-xbuild-linux:v0.1"
     ;;
 *)
     echo "Build not defined for: $TARGET" >&2
@@ -142,7 +168,13 @@ else
     CMD+=" && $POST_SCRIPT "
 fi
 
-DOCER_CMD="docker run --rm -it -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
+# DOCER_CMD="docker run --rm -it -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
+if ((INTERACTIVE)); then
+    DOCER_CMD="docker run --rm -it -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
+else
+    DOCER_CMD="docker run --rm -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
+fi
+# DOCER_CMD="docker run --rm -v \"$SRC_DIR\":/app $@ -w /app \"$DOCKER_IMAGE\" bash -c "
 
 # Print final command
 echo '---------------------------------'
@@ -153,3 +185,4 @@ echo '---------------------------------'
 # Run the build inside Docker container with mounted volume
 FINAL_CMD="$DOCER_CMD \"$CMD\" "
 eval "$FINAL_CMD"
+exit $?
